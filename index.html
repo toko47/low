@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>爱杀日志 · 校园暧昧死亡推理</title>
+<style>
+/* ===== RESET & FONTS ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#0d0d1a;--bg-panel:#141428;--bg-card:#1a1a30;--bg-sidebar:#0f0f1f;
+  --text-primary:#e0d8c8;--text-secondary:#a09888;--text-dim:#6a6468;
+  --accent:#c41e3a;--accent-glow:#e84050;--accent-dim:#8b1528;
+  --gold:#c9a84c;--gold-dim:#7a6428;--blue-link:#6a9fd8;
+  --border:#2a2a3a;--radius:8px;--sidebar-w:300px;--transition:0.3s ease;
+}
+html,body{height:100%}
+body{
+  font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','WenQuanYi Micro Hei',sans-serif;
+  background:var(--bg-deep);color:var(--text-primary);line-height:1.7;overflow-x:hidden;
+}
+#app{display:flex;height:100vh}
+
+/* ===== SIDEBAR ===== */
+#sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--bg-sidebar);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:10;
+  transition:transform var(--transition);overflow-y:auto;
+}
+#sidebar.hidden{transform:translateX(-100%);min-width:0;width:0;pointer-events:none}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);text-align:center}
+.sidebar-header h2{font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:1rem;color:var(--accent);letter-spacing:2px}
+.sidebar-header .subtitle{font-size:.7rem;color:var(--text-dim);margin-top:2px}
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--border)}
+.sidebar-tab{
+  flex:1;padding:10px 4px;text-align:center;font-size:.72rem;cursor:pointer;
+  color:var(--text-dim);background:transparent;border:none;border-bottom:2px solid transparent;
+  transition:all var(--transition);font-family:inherit;
+}
+.sidebar-tab:hover{color:var(--text-secondary)}
+.sidebar-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.sidebar-content{flex:1;overflow-y:auto;padding:12px}
+.sidebar-panel{display:none}
+.sidebar-panel.active{display:block}
+
+/* Profile cards */
+.char-mini{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all var(--transition);
+}
+.char-mini:hover{border-color:var(--accent-dim)}
+.char-mini .name{font-weight:600;font-size:.85rem}
+.char-mini .tag{font-size:.68rem;color:var(--accent);margin-left:6px}
+.char-mini .brief{font-size:.7rem;color:var(--text-secondary);margin-top:2px}
+.char-mini.locked{opacity:.35;cursor:default}
+.char-mini.locked:hover{border-color:var(--border)}
+.char-mini.locked .name{color:var(--text-dim)}
+.char-mini.locked .brief{color:var(--text-dim)}
+
+.evidence-card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-left:3px solid var(--gold);border-radius:0 var(--radius) var(--radius) 0;
+  padding:10px 12px;margin-bottom:8px;font-size:.75rem;
+}
+.evidence-card .ev-label{
+  font-family:'SF Mono','Cascadia Code','Menlo','Courier New',monospace;font-size:.65rem;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1px;
+}
+.evidence-card.locked{border-left-color:var(--border);opacity:.4}
+.evidence-card.locked .ev-label{color:var(--text-dim)}
+.evidence-card:not(.locked){cursor:pointer}
+.evidence-card:not(.locked):hover{border-color:var(--gold)}
+
+.sidebar-save{
+  padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;
+}
+.sidebar-save button{
+  flex:1;padding:6px;font-size:.7rem;background:var(--bg-card);
+  border:1px solid var(--border);color:var(--text-secondary);border-radius:4px;
+  cursor:pointer;font-family:inherit;transition:all var(--transition);
+}
+.sidebar-save button:hover{border-color:var(--accent-dim);color:var(--text-primary)}
+
+/* ===== MAIN ===== */
+#main{flex:1;overflow-y:auto;position:relative}
+.page{display:none;min-height:100%;padding:40px;animation:fadeIn .5s ease}
+.page.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.page-inner{max-width:700px;width:100%}
+
+/* ===== BUTTONS ===== */
+.btn{
+  padding:14px 48px;font-size:1rem;font-family:inherit;font-weight:500;
+  border:1px solid var(--accent-dim);background:transparent;color:var(--text-primary);
+  border-radius:var(--radius);cursor:pointer;letter-spacing:2px;
+  transition:all var(--transition);min-width:240px;text-align:center;
+}
+.btn:hover{background:var(--accent);border-color:var(--accent)}
+.btn.secondary{border-color:var(--border);color:var(--text-secondary)}
+.btn.secondary:hover{border-color:var(--text-dim);color:var(--text-primary);background:var(--bg-card)}
+.btn.small{padding:8px 20px;font-size:.8rem;min-width:auto;letter-spacing:1px}
+
+/* ===== HOME ===== */
+#page-home{background:radial-gradient(ellipse at center,#1a1025 0%,var(--bg-deep) 70%)}
+.home-title{font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:2.8rem;font-weight:700;text-align:center;letter-spacing:6px;margin-bottom:4px}
+.home-subtitle{text-align:center;font-size:.95rem;color:var(--accent);letter-spacing:3px;margin-bottom:32px}
+.home-intro{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:32px;font-size:.9rem;color:var(--text-secondary);line-height:1.9;
+}
+.home-intro p{margin-bottom:12px}
+.home-intro p:last-child{margin-bottom:0}
+.home-intro .hl{color:var(--accent-glow);font-weight:500}
+.home-buttons{display:flex;flex-direction:column;gap:12px;align-items:center}
+
+/* ===== NARRATIVE ===== */
+.narrative{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:28px;margin-bottom:28px;line-height:1.9;font-size:.92rem;
+}
+.narrative .scene-label{
+  font-family:'SF Mono','Cascadia Code','Menlo','Courier New',monospace;font-size:.7rem;color:var(--accent);
+  letter-spacing:2px;margin-bottom:12px;
+}
+
+/* ===== SCENE INVESTIGATION ===== */
+.scene-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.scene-btn{
+  padding:18px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text-primary);cursor:pointer;
+  text-align:left;font-family:inherit;font-size:.85rem;transition:all var(--transition);
+}
+.scene-btn:hover{border-color:var(--gold);background:#1e1e38}
+.scene-btn.checked{border-color:var(--gold-dim);opacity:.6}
+.scene-btn .sc-icon{font-size:1.4rem;display:block;margin-bottom:4px}
+
+/* ===== NOTE / CLUE DISPLAY ===== */
+.note-display{
+  background:#f5f0e0;color:#2a2010;border:2px solid #c9a84c;border-radius:var(--radius);
+  padding:24px;margin:16px 0;font-size:.9rem;line-height:1.8;position:relative;
+}
+.note-display .note-label{
+  font-family:'SF Mono','Cascadia Code','Menlo','Courier New',monospace;font-size:.65rem;color:#8a7040;
+  letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;
+}
+.note-display .note-text{font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:1.05rem}
+.note-display .note-name{color:#c41e3a;font-weight:700}
+
+/* ===== CAMPUS SEARCH ===== */
+.search-container{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:32px;text-align:center;
+}
+.search-header{
+  font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:1.2rem;color:var(--text-primary);
+  margin-bottom:4px;letter-spacing:2px;
+}
+.search-subtitle{font-size:.75rem;color:var(--text-dim);margin-bottom:24px}
+.search-box{
+  display:flex;gap:8px;max-width:420px;margin:0 auto;
+}
+.search-box input{
+  flex:1;padding:12px 16px;background:var(--bg-deep);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text-primary);font-family:'SF Mono','Cascadia Code','Menlo','Courier New',monospace;
+  font-size:.9rem;outline:none;transition:all var(--transition);
+}
+.search-box input:focus{border-color:var(--accent-dim)}
+.search-box input::placeholder{color:var(--text-dim)}
+.search-box button{
+  padding:12px 24px;background:var(--accent-dim);border:none;border-radius:var(--radius);
+  color:var(--text-primary);cursor:pointer;font-family:inherit;font-size:.85rem;
+  transition:all var(--transition);
+}
+.search-box button:hover{background:var(--accent)}
+
+/* search result area — intentionally minimal/ambiguous */
+.search-result-area{
+  margin-top:24px;min-height:40px;font-size:.8rem;color:var(--text-dim);
+}
+
+/* ===== INTERROGATION ===== */
+.interrogate-header{margin-bottom:20px}
+.interrogate-header h2{font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:1.4rem;margin-bottom:4px}
+.interrogate-header .sub{color:var(--text-dim);font-size:.8rem}
+.suspect-select{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.suspect-opt{
+  padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text-secondary);cursor:pointer;
+  font-family:inherit;font-size:.82rem;transition:all var(--transition);
+}
+.suspect-opt:hover{border-color:var(--text-dim);color:var(--text-primary)}
+.suspect-opt.active{border-color:var(--accent);color:var(--accent-glow)}
+.suspect-opt.done{border-color:var(--gold-dim);color:var(--gold)}
+.suspect-opt.done::after{content:' ✓';font-size:.7rem}
+
+.interrogate-panel{
+  background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px;margin-bottom:16px;min-height:120px;
+}
+.interrogate-panel .testimony{
+  font-style:italic;color:var(--text-secondary);padding:12px;
+  border-left:3px solid var(--border);margin-bottom:16px;
+  background:var(--bg-deep);border-radius:0 var(--radius) var(--radius) 0;
+}
+.interrogate-panel .response{
+  padding:12px;background:var(--bg-card);border-radius:var(--radius);
+  margin-top:12px;animation:fadeIn .3s ease;line-height:1.8;
+}
+.interrogate-panel .key-name{
+  color:var(--accent-glow);font-weight:700;background:rgba(196,30,58,.15);
+  padding:2px 6px;border-radius:3px;
+}
+.questions-list{display:flex;flex-direction:column;gap:8px}
+.q-btn{
+  padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text-primary);cursor:pointer;
+  text-align:left;font-family:inherit;font-size:.85rem;transition:all var(--transition);
+}
+.q-btn:hover{border-color:var(--accent-dim);background:#1e1e38}
+.q-btn.asked{opacity:.45;cursor:default;border-color:var(--border)}
+.q-btn.asked:hover{background:var(--bg-card)}
+.page-nav{margin-top:20px;text-align:center}
+
+/* ===== VOTE ===== */
+.vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.vote-btn{
+  padding:20px;background:var(--bg-card);border:2px solid var(--border);
+  border-radius:var(--radius);color:var(--text-primary);cursor:pointer;
+  font-family:inherit;font-size:1rem;transition:all var(--transition);text-align:center;
+}
+.vote-btn:hover{border-color:var(--accent);background:#1e1e38;transform:scale(1.02)}
+.vote-btn .vn{display:block;font-size:1.2rem;font-weight:600;margin-bottom:4px}
+.vote-btn .vh{display:block;font-size:.7rem;color:var(--text-dim)}
+
+/* ===== ENDING ===== */
+.ending-content{text-align:center;animation:fadeIn .8s ease}
+.ending-content .et{
+  font-family:'SF Mono','Cascadia Code','Menlo','Courier New',monospace;font-size:.75rem;color:var(--accent);
+  letter-spacing:2px;margin-bottom:8px;
+}
+.ending-content h2{font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:2rem;margin-bottom:16px}
+.ending-content .eb{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;line-height:1.9;margin-bottom:24px;font-size:.9rem;text-align:left;
+}
+.ending-content .eq{font-family:'PingFang SC','Hiragino Sans GB','STSong','SimSun',serif;font-size:1.2rem;color:var(--gold);font-style:italic;margin:20px 0}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);
+  z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease;
+}
+.modal-content{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:32px;max-width:520px;max-height:80vh;overflow-y:auto;line-height:1.8;font-size:.85rem;
+}
+.modal-content h3{color:var(--accent);margin-bottom:12px}
+.modal-content ul{padding-left:20px}
+.modal-content li{margin-bottom:6px;color:var(--text-secondary)}
+
+/* ===== TOAST (only for save/load, NOT for game events) ===== */
+.toast{
+  position:fixed;bottom:24px;right:24px;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;
+  font-size:.8rem;color:var(--text-secondary);z-index:150;
+  animation:slideUp .3s ease,fadeOut .3s ease 2s forwards;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeOut{to{opacity:0}}
+
+#sidebar-toggle{
+  display:none;position:fixed;top:12px;left:12px;z-index:50;
+  background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);
+  padding:8px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  #app{flex-direction:column}
+  #sidebar{position:fixed;top:0;left:0;height:100%;z-index:30;width:280px;min-width:280px}
+  #sidebar.hidden{transform:translateX(-100%)}
+  #sidebar-toggle{display:block}
+  #main{width:100%}
+  .page{padding:24px 16px}
+  .home-title{font-size:1.8rem;letter-spacing:3px}
+  .scene-grid{grid-template-columns:1fr}
+  .vote-grid{grid-template-columns:1fr}
+  .suspect-select{flex-direction:column}
+  .search-box{flex-direction:column}
+}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg-deep)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<button id="sidebar-toggle" onclick="toggleSidebar()">☰ 菜单</button>
+
+<div id="app">
+
+<!-- ===== SIDEBAR ===== -->
+<aside id="sidebar" class="hidden">
+  <div class="sidebar-header">
+    <h2>爱杀日志</h2>
+    <div class="subtitle">CASE FILE</div>
+  </div>
+  <div class="sidebar-tabs">
+    <button class="sidebar-tab active" onclick="switchSidebarTab('profiles')">已解锁档案</button>
+    <button class="sidebar-tab" onclick="switchSidebarTab('evidence')">证据</button>
+  </div>
+  <div class="sidebar-content">
+    <div id="sb-profiles" class="sidebar-panel active">
+      <div id="profile-list">
+        <div class="char-mini locked" id="profile-victim">
+          <span class="name">陈越</span><span class="tag">死者</span>
+          <div class="brief">未知详情</div>
+        </div>
+        <div style="padding:12px;text-align:center;font-size:.7rem;color:var(--text-dim);" id="no-profiles-msg">
+          暂无已解锁人物档案<br>请通过现场搜查与校园官网检索解锁
+        </div>
+      </div>
+    </div>
+    <div id="sb-evidence" class="sidebar-panel">
+      <div id="evidence-list">
+        <div class="evidence-card locked" id="ev-1"><span class="ev-label">线索 1</span><br>???</div>
+        <div class="evidence-card locked" id="ev-2"><span class="ev-label">线索 2</span><br>???</div>
+        <div class="evidence-card locked" id="ev-3"><span class="ev-label">线索 3</span><br>???</div>
+        <div class="evidence-card locked" id="ev-4"><span class="ev-label">线索 4</span><br>???</div>
+        <div class="evidence-card locked" id="ev-5"><span class="ev-label">线索 5</span><br>???</div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-save">
+    <button onclick="saveGame()">💾 存档</button>
+    <button onclick="loadGame()">📂 读档</button>
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<main id="main">
+
+<!-- PAGE: HOME -->
+<section id="page-home" class="page active">
+  <div class="page-inner">
+    <div class="home-title">爱杀日志</div>
+    <div class="home-subtitle">校园死亡推理</div>
+    <div class="home-intro">
+      <p>周末清晨，校园废弃自习楼发现一具男尸。</p>
+      <p>死者<span class="hl">陈越</span>，高三，年级第一。</p>
+      <p>教学楼<span class="hl">18:00锁门</span>，门窗完好，无闯入痕迹。</p>
+      <p>警方初步判定：<span class="hl">延时毒杀，伪密室</span>。</p>
+      <p>校园官网已开放信息检索权限。其余信息——<span class="hl">全部空白</span>。</p>
+    </div>
+    <div class="home-buttons">
+      <button class="btn" onclick="startGame()">开 始 调 查</button>
+      <button class="btn secondary" onclick="loadGame()">读 取 存 档</button>
+    </div>
+  </div>
+</section>
+
+<!-- PAGE: OPENING -->
+<section id="page-opening" class="page">
+  <div class="page-inner">
+    <div class="narrative">
+      <div class="scene-label">▌ 序章 · 案件开启</div>
+      <p>死者：<strong>陈越</strong></p>
+      <p>死因：饮用水延时慢性毒杀</p>
+      <p>案发地点：校园废弃自习楼三层教室</p>
+      <p>密室条件：18:00保洁锁楼后无人进出，门窗完好</p>
+      <p style="color:var(--text-dim);margin-top:12px;">目前已知信息仅此而已。所有嫌疑人、证人——身份未知。</p>
+    </div>
+    <div class="home-buttons">
+      <button class="btn" onclick="navigateTo('scene')">前往案发现场</button>
+      <button class="btn secondary" onclick="navigateTo('search')">校园官网检索</button>
+    </div>
+  </div>
+</section>
+
+<!-- PAGE: CRIME SCENE -->
+<section id="page-scene" class="page">
+  <div class="page-inner">
+    <div class="narrative">
+      <div class="scene-label">▌ 第一章 · 案发现场搜查</div>
+      <p>三楼废弃教室。陈越端坐于课桌前，早已没有呼吸。</p>
+      <p>桌上散落着几件物品。仔细检查——或许能发现什么。</p>
+    </div>
+    <div class="scene-grid">
+      <button class="scene-btn" id="sc-1" onclick="checkScene('clue1')">
+        <span class="sc-icon">🎮</span>游戏手柄 · 侧面有便签
+      </button>
+      <button class="scene-btn" id="sc-2" onclick="checkScene('clue2')">
+        <span class="sc-icon">📱</span>手机 · 备忘录未删截图
+      </button>
+      <button class="scene-btn" id="sc-3" onclick="checkScene('clue3')">
+        <span class="sc-icon">📄</span>课桌夹层 · 碎纸片
+      </button>
+      <button class="scene-btn" id="sc-4" onclick="checkScene('clue4')">
+        <span class="sc-icon">📓</span>习题册 · 扉页潦草字迹
+      </button>
+      <button class="scene-btn" id="sc-5" onclick="checkScene('clue5')">
+        <span class="sc-icon">📋</span>保安值班日志 · 锁楼记录
+      </button>
+    </div>
+    <div id="scene-note-area"></div>
+    <div class="page-nav" id="scene-nav"></div>
+  </div>
+</section>
+
+<!-- PAGE: CAMPUS SEARCH -->
+<section id="page-search" class="page">
+  <div class="page-inner">
+    <div class="search-container">
+      <div class="search-header">校园信息检索系统</div>
+      <div class="search-subtitle">请输入姓名进行查询</div>
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="输入姓名..." onkeydown="if(event.key==='Enter')doSearch()">
+        <button onclick="doSearch()">检索</button>
+      </div>
+      <div class="search-result-area" id="search-result-area"></div>
+    </div>
+    <div class="page-nav">
+      <button class="btn small secondary" onclick="navigateTo('interrogate')">前往传唤审问</button>
+      <button class="btn small secondary" onclick="navigateTo('opening')">← 返回</button>
+    </div>
+  </div>
+</section>
+
+<!-- PAGE: INTERROGATION -->
+<section id="page-interrogate" class="page">
+  <div class="page-inner" style="max-width:760px;">
+    <div class="interrogate-header">
+      <h2>传唤审问</h2>
+      <div class="sub">仅可审问已解锁人物。未解锁人物不会出现在此列表。</div>
+    </div>
+
+    <div class="suspect-select" id="suspect-select"></div>
+
+    <div class="interrogate-panel" id="interrogate-panel">
+      <div style="text-align:center;color:var(--text-dim);padding:32px;" id="interrogate-empty">
+        尚未解锁任何可审问人物。<br><br>
+        请先前往<strong>案发现场</strong>搜集线索，<br>
+        再到<strong>校园官网检索</strong>解锁人物档案。
+      </div>
+      <div class="testimony" id="testimony-text" style="display:none;"></div>
+      <div id="response-area"></div>
+    </div>
+
+    <div class="questions-list" id="questions-list"></div>
+
+    <div class="page-nav" id="interrogate-nav">
+      <button class="btn small secondary" onclick="navigateTo('search')">← 返回校园检索</button>
+      <button class="btn small" id="btn-to-vote" onclick="navigateTo('vote')" style="display:none;">提交最终指认 →</button>
+    </div>
+  </div>
+</section>
+
+<!-- PAGE: VOTE -->
+<section id="page-vote" class="page">
+  <div class="page-inner" style="max-width:600px;">
+    <div class="narrative" style="text-align:center;">
+      <div class="scene-label">▌ 终章 · 最终指认</div>
+      <p style="font-size:1.1rem;margin-top:8px;">你已掌握所有可获得的信息。</p>
+      <p style="color:var(--accent-glow);font-weight:500;">投毒真凶是谁？</p>
+      <p style="font-size:.75rem;color:var(--text-dim);margin-top:8px;">（仅显示已解锁嫌疑人。未解锁的人物无法指认。）</p>
+    </div>
+    <div class="vote-grid" id="vote-grid"></div>
+  </div>
+</section>
+
+<!-- PAGE: ENDING -->
+<section id="page-ending" class="page">
+  <div class="page-inner ending-content" id="ending-content"></div>
+</section>
+
+</main>
+</div>
+
+<!-- POPUP / MODAL -->
+<div id="clue-popup" class="modal-overlay" style="display:none;"></div>
+<div id="toast-container"></div>
+
+<script>
+// ============================================================
+// GAME STATE
+// ============================================================
+var DEFAULT_STATE = {
+  currentPage: 'home',
+  cluesCollected: [],       // ['clue1','clue2','clue3','clue4']
+  searchedNames: [],        // names player has typed into campus search
+  interrogationsDone: [],   // completed interrogations
+  currentSuspect: null,
+  questionsAsked: {},       // {xinlingling:[q1,q2,q3], ...}
+  voteCast: null,
+  ending: null
+};
+
+var GS = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+// ============================================================
+// DATA: CHARACTERS & DEPENDENCIES
+// ============================================================
+
+// Searchable names and their unlock conditions
+// All names are technically searchable, but some are only practically
+// discoverable through specific paths.
+var SEARCHABLE = {
+  '辛玲玲':   { id:'xinlingling',   type:'suspect', unlockHint:'scene' },
+  '同学A':    { id:'classmateA',    type:'witness',  unlockHint:'scene' },
+  '米乐':     { id:'mile',          type:'suspect', unlockHint:'scene' },
+  '林七月':   { id:'linqiyue',      type:'suspect', unlockHint:'scene' },
+  '钟婷':     { id:'zhongting',     type:'suspect', unlockHint:'interrogate_classmateA' },
+  '米乐男友': { id:'mileBoyfriend', type:'witness',  unlockHint:'profile_mile' },
+  '林七月男友':{id:'linBoyfriend',  type:'witness',  unlockHint:'profile_linqiyue' },
+  '保安':      { id:'baoan',         type:'witness',  unlockHint:'scene' }
+};
+
+// Name aliases — short/nickname → full searchable name
+var NAME_ALIASES = {
+  '玲玲': '辛玲玲',
+  '七月': '林七月',
+  '乐':   '米乐',
+  '婷婷': '钟婷',
+  '钟':   '钟婷',
+  '米':   '米乐',
+  'A':    '同学A',
+  'a':    '同学A',
+  '保安':  '保安',
+  '校卫':  '保安',
+  '门卫':  '保安'
+};
+
+// Profile data — only shown after search
+var PROFILES = {
+  xinlingling: {
+    name:"辛玲玲", tag:"嫌疑人 · 女一",
+    class:"高三(2)班", studentId:"20210342",
+    text:"二次元、微胖、无刘海低马尾。固定游戏搭子，与死者长期线上线下相伴。校园活动记录显示：与陈越在多个游戏社群中互为好友，共同游戏时长超过800小时。",
+    message:"【爱好者留言板】玲玲☾☼最近在找人双排上分，说原来的固搭最近不怎么理她了。上周六下午有人看到她在教学楼门口站着哭，然后跑出了校门。"
+  },
+  zhongting: {
+    name:"钟婷", tag:"嫌疑人 · 女二",
+    class:"高三(2)班", studentId:"20210328",
+    text:"家教极严、校内无社交账号。性格内向压抑。近期校园系统显示：曾借用他人账号登录校园社交平台，累计在线时长异常。无正面照片存档。",
+    message:"【班级留言板】钟婷的家长每天来接送，不允许她参加任何课外活动。有室友说深夜看到她在被窝里用手机聊天，笑得很开心。"
+  },
+  mile: {
+    name:"米乐", tag:"嫌疑人 · 女三",
+    class:"高三(4)班", studentId:"20210415",
+    text:"活泼开朗、对外否认与死者有任何关系。校内有固定男友。近期校园论坛多次出现匿名帖，涉及她与死者之间的私密信息——发帖IP指向死者陈越。",
+    message:"【论坛留言】米乐最近和一个高三(5)班的男生走得很近，经常在操场一起散步。据说是她现任男友。上周六下午有人看到他们一起进教学楼，男生在楼下等了很久。"
+  },
+  linqiyue: {
+    name:"林七月", tag:"嫌疑人 · 女四",
+    class:"高三(1)班", studentId:"20210107",
+    text:'被死者称为"妹妹"，日常互动频繁、边界模糊。已有在校男友。校园聊天记录显示：死者曾多次在深夜发送私信，内容涉及"分手""跟我走"等字眼。',
+    message:"【论坛留言】七月最近和男朋友经常吵架。据说和陈越有关。她男朋友是高三(3)班的，放话说要收拾陈越。上周六这人全天在校外，和朋友在一起。"
+  },
+  classmateA: {
+    name:"同学A", tag:"证人",
+    class:"高三(2)班", studentId:"20210305",
+    text:"校园社交账号登录记录显示：近期异地登录频繁，登录设备与本人常用设备不符。本人无夜间入校记录。",
+    message:"【个人动态】最近总是收到异地登录提醒，改了好几次密码都没用。怀疑有人盗了我的号。不过也没什么大不了的，反正我也不怎么用。"
+  },
+  mileBoyfriend: {
+    name:"米乐男友", tag:"证人",
+    class:"高三(5)班", studentId:"20210522",
+    text:"为米乐交往对象。案发当日入校记录：陪同米乐入校，全程在楼下等候，未进入教学楼。监控可证实全程无异常。",
+    message:"【入校记录】上周六17:20登记入校，17:23登记离校。全程在教学楼一楼门口等候，未上楼。保安可作证。"
+  },
+  linBoyfriend: {
+    name:"林七月男友", tag:"证人",
+    class:"高三(3)班", studentId:"20210311",
+    text:"为林七月交往对象。与死者有过多次公开冲突记录。案发当日：无入校记录。",
+    message:"【入校记录】上周六全天无入校记录。多人作证当天下午在校外与朋友聚会，有照片为证。排除嫌疑。"
+  }
+};
+
+// Clue data
+var CLUES = {
+  clue1: {
+    id:'clue1', icon:'🎮', title:'游戏手柄便签',
+    text:'白纸手写，字迹工整：\n<strong style="color:#c41e3a;font-size:1.1rem;">"今晚和玲玲双排"</strong>\n\n便签贴在游戏手柄侧面，墨水已干。',
+    namesFound:['辛玲玲']
+  },
+  clue2: {
+    id:'clue2', icon:'📱', title:'手机备忘录截图',
+    text:'截图未彻底删除，内容显示：\n<strong style="color:#c41e3a;font-size:1.1rem;">"借同学A的号继续聊，不能被爸妈发现"</strong>\n\n发送时间：案发前三日深夜。',
+    namesFound:['同学A']
+  },
+  clue3: {
+    id:'clue3', icon:'📄', title:'课桌夹层碎纸片',
+    text:'纸片被撕碎后塞入夹层，拼合后字迹清晰：\n<strong style="color:#c41e3a;font-size:1.1rem;">"别再到处说我和你谈过，留言人：米乐"</strong>\n\n纸张边缘有明显揉捏痕迹。',
+    namesFound:['米乐']
+  },
+  clue4: {
+    id:'clue4', icon:'📓', title:'习题册扉页字迹',
+    text:'潦草但可辨认，写在习题册扉页空白处：\n<strong style="color:#c41e3a;font-size:1.1rem;">"七月别生气，下次背着他我们再聊"</strong>\n\n旁边画了一个简笔笑脸。',
+    namesFound:['林七月']
+  },
+  clue5: {
+    id:'clue5', icon:'📋', title:'保安值班日志',
+    text:'值班日志登记：\n<strong style="color:#c41e3a;font-size:1.1rem;">每日18:00锁楼，内部无法开门</strong>\n\n上周六记录：\n· 17:56 最后一名学生离楼\n· 18:00 清场锁门，确认无人滞留\n· 23:00 巡逻发现三楼异常，报警\n\n值班人签名：<strong style="color:#c41e3a;">保安 张建国</strong>',
+    namesFound:['保安']
+  }
+};
+
+// Interrogation data
+var INTERROGATIONS = {
+  xinlingling: {
+    id:'xinlingling', name:'辛玲玲', title:'嫌疑人 · 女一',
+    testimony:'"我来和他约好打游戏，带了喝的。结果我发现他一边跟我双排，一边聊别人，还在私聊骂我普通、笨重、只会打游戏。我太难过了，吵完我就走了，我绝对没下毒。"',
+    result:'辛玲玲情绪真实、破绽少、无作案窗口。16:20入校，十分钟后哭着离开，门口保安可证实她一路跑出校门。动机：心碎，但无杀人勇气。排除物理投毒嫌疑。',
+    questions:[
+      {id:'q1',text:'你当天什么时候去的废弃自习楼？',response:'"下午四点二十左右我上去找陈越的，跟他吵了一架，大概四点半出头我就走了。我走之后就再也没回去过。"'},
+      {id:'q2',text:'吵架内容是什么？离开前有没有见到其他人上楼？',response:'"我发现他同时吊着好几个人，气疯了。我离开的时候整栋楼安安静静，没看见任何人上来。"'},
+      {id:'q3',text:'你有没有碰过他桌上的东西？',response:'"我当时满脑子生气，什么都没碰，转身就走了。"'}
+    ]
+  },
+  zhongting: {
+    id:'zhongting', name:'钟婷', title:'嫌疑人 · 女二',
+    testimony:'"我昨天去自习楼找陈越吵架了，四点四十上去、四点五十就走了。之后我再也没去过学校。我和他在网上聊过几句，现实不怎么认识。"',
+    result:'钟婷的证词经过精心设计：承认入校、承认吵架、给出具体时间线（16:40–16:50）——恰好覆盖了辛玲玲离场后的空白窗口。她试图用"吵完就走"制造离场假象，掩盖投毒行为。但同学A的证词显示她的登记时间为16:48，口供中的时间线存在矛盾：她无法解释从16:48入校到16:50"离开"之间仅两分钟的合理性，更无法说明为何要用他人身份登记。',
+    questions:[
+      {id:'q1',text:'周末下午你去过废弃自习楼吗？',response:'"去过。我下午四点四十左右去自习楼找陈越吵架，他喜欢我还和别人谈恋爱，但是四点五十左右就直接走了。之后我再也没去过学校。"'},
+      {id:'q2',text:'你怎么知道他喜欢你？',response:'"他在操场盯着我看了十秒，这不是喜欢我是什么。而且我去学校只是找人理论，没有做任何多余的事。"'},
+      {id:'q3',text:'四点五十前后你在哪里？',response:'"我说了，我四点五十就离开教学楼了，之后一直在校外。我根本没有停留。"'}
+    ]
+  },
+  mile: {
+    id:'mile', name:'米乐', title:'嫌疑人 · 女三',
+    testimony:'"我和他从来没谈过，纯属造谣。我上楼只是警告他别乱毁我名声。"',
+    result:'米乐嘴硬、极度好面子。她确实和男主谈过恋爱，分手想体面收场。但男主到处炫耀、到处抹黑她，让她在朋友圈彻底社死。有动机、无投毒时间。上楼仅三分钟争吵，未碰水杯。她男友全程在楼下等候。',
+    questions:[
+      {id:'q1',text:'你下午几点去找的陈越？',response:'"五点二十左右我上楼找他对峙。受不了他到处乱说我们谈恋爱的事情。"'},
+      {id:'q2',text:'上楼的时候有没有在路上碰到其他人？',response:'"上楼途中没有遇见任何人，只有陈越一个人在教室坐着。"'},
+      {id:'q3',text:'离开的时候大概几点？',response:'"吵完我五点二十八左右就走了，不想多待。"'}
+    ]
+  },
+  linqiyue: {
+    id:'linqiyue', name:'林七月', title:'嫌疑人 · 女四',
+    testimony:'"我只是来还笔记，我已经和他划清界限了，我有男朋友。"',
+    result:'林七月享受暧昧、吊着男主。但男主得寸进尺、挑衅她男友、逼迫私奔。她彻底厌烦，选择切割关系。有纠纷但无杀人动机。17:50入校交谈后离开，走时陈越还活着。',
+    questions:[
+      {id:'q1',text:'你当天傍晚去过自习楼吗？',response:'"五点五十左右上去的，打算和陈越说清楚，不要再保持暧昧关系。"'},
+      {id:'q2',text:'见到陈越的时候，他状态怎么样？',response:'"看着有点沉闷，我以为只是吵架多了心情不好，没多想。我们简单聊了几句。"'},
+      {id:'q3',text:'你几点离开大楼？离开前还有别人吗？',response:'"五点五十六离开的，全程只有我们两个人。出门没多久保安就准备锁大门了。"'}
+    ]
+  },
+  classmateA: {
+    id:'classmateA', name:'同学A', title:'证人',
+    testimony:'"我的号最近一直被借走。她不让我看聊天记录，说隐私。我周六一整天都在家。"',
+    result:'同学A的账号长期被<strong>钟婷</strong>借用。钟婷用她的身份在学校社交平台与陈越网恋数月的全部记录，同学A本人毫不知情。此外，同学A的口供直接确认：钟婷在16:48借用她的身份登记入校。这是解锁钟婷的关键线索。',
+    questions:[
+      {id:'q1',text:'周末下午你有没有去过废弃自习楼？',response:'"我本人没有上楼。但是……<span class="key-name">钟婷</span>借我的校园信息登记进学校了，大概四点四十多的时候。她不让我过问她去干什么。"'},
+      {id:'q2',text:'登记入校的侧门记录还在吗？',response:'"系统会留存登记名字，登记单写的是我的名字，外人第一眼只会以为是我入校。"'},
+      {id:'q3',text:'之后钟婷什么时候回来找你的？',response:'"不到五点，她很快就回来了，神色不太对劲，什么都不肯多说。"'}
+    ]
+  },
+  mileBoyfriend: {
+    id:'mileBoyfriend', name:'米乐男友', title:'证人',
+    testimony:'"我在楼下全程等我女朋友，她上去很快就下来了，全程无异常。"',
+    result:'监控证实：全程在楼下等候，米乐上楼仅三分钟后返回。两人一同离开。完美不在场证明。排除嫌疑。',
+    questions:[
+      {id:'q1',text:'米乐下午的行动你清楚吗？',response:'"五点出头她出门，大概五点半左右就回来了，回来之后一直在我身边，没有再次外出。"'}
+    ]
+  },
+  linBoyfriend: {
+    id:'linBoyfriend', name:'林七月男友', title:'证人',
+    testimony:'"我一直不爽陈越，早就让我女朋友远离他，她已经答应我彻底断联。"',
+    result:'多次与死者公开冲突。但案发当日：无入校记录。监控可证实他全天在校外。排除嫌疑。',
+    questions:[
+      {id:'q1',text:'林七月傍晚出门是去找陈越吗？',response:'"是的，她提前和我说了，打算彻底说清关系。六点不到她就回来了，之后一直和我在一起。"'}
+    ]
+  },
+  baoan: {
+    id:'baoan', name:'保安', title:'证人 · 校卫',
+    testimony:'"每天傍晚六点锁楼，雷打不动。那天晚上巡逻的时候，发现三楼有人倒在地上不动了。"',
+    result:'保安的口供建立了本案最关键的物理前提：18:00锁楼后整栋大楼为绝对密闭空间，内部无法开门。毒药必然在锁楼前投入。死者被发现时已死亡数小时。',
+    questions:[
+      {id:'q1',text:'自习楼锁楼时间是几点？',response:'"每天傍晚18:00准时封锁全部出入口，清场巡查，锁门之后绝对无法进出。"'},
+      {id:'q2',text:'当晚什么时候发现死者？',response:'"深夜23点左右巡逻，透过窗户看见里面有人倒地，立刻报警。"'},
+      {id:'q3',text:'楼内封闭之后，里面的人能不能自行开门离开？',response:'"内部无法开启大门，一旦锁死，整栋楼就是密闭空间。"'}
+    ]
+  }
+};
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function navigateTo(page) {
+  var pages = document.querySelectorAll('.page');
+  for (var i=0;i<pages.length;i++) pages[i].classList.remove('active');
+  var t = document.getElementById('page-'+page);
+  if (t) { t.classList.add('active'); GS.currentPage = page; }
+  if (page!=='home') document.getElementById('sidebar').classList.remove('hidden');
+  updateSidebar();
+  if (page==='interrogate') renderInterrogation();
+  if (page==='search') { document.getElementById('search-result-area').innerHTML=''; }
+  if (page==='vote') renderVote();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+function switchSidebarTab(tab) {
+  var tabs = document.querySelectorAll('.sidebar-tab');
+  for (var i=0;i<tabs.length;i++) tabs[i].classList.remove('active');
+  var lbl = tab==='profiles'?'已解锁档案':'证据';
+  for (var j=0;j<tabs.length;j++) {
+    if (tabs[j].textContent.indexOf(lbl)!==-1) tabs[j].classList.add('active');
+  }
+  var panels = document.querySelectorAll('.sidebar-panel');
+  for (var k=0;k<panels.length;k++) panels[k].classList.remove('active');
+  var p = document.getElementById('sb-'+tab);
+  if (p) p.classList.add('active');
+}
+
+// ============================================================
+// START / LOAD
+// ============================================================
+
+function startGame() {
+  GS = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  GS.currentPage = 'opening';
+  resetUI();
+  navigateTo('opening');
+  document.getElementById('sidebar').classList.remove('hidden');
+  updateSidebar();
+}
+
+function resetUI() {
+  var sceneBtns = document.querySelectorAll('.scene-btn');
+  for (var i=0;i<sceneBtns.length;i++) sceneBtns[i].classList.remove('checked');
+  document.getElementById('scene-note-area').innerHTML = '';
+  document.getElementById('scene-nav').innerHTML = '';
+  document.getElementById('btn-to-vote').style.display = 'none';
+}
+
+// ============================================================
+// CRIME SCENE
+// ============================================================
+
+function checkScene(clueId) {
+  // Always show the clue — allow re-reading
+  var clue = CLUES[clueId];
+  showNoteDisplay(clue);
+
+  // Only collect once
+  if (GS.cluesCollected.indexOf(clueId)===-1) {
+    GS.cluesCollected.push(clueId);
+    var btn = document.getElementById('sc-'+clueId.replace('clue',''));
+    if (btn) btn.classList.add('checked');
+    updateEvidenceSidebar();
+
+  // Track names found from clues
+  if (clue.namesFound) {
+    for (var i=0;i<clue.namesFound.length;i++) {
+      var nm = clue.namesFound[i];
+      if (GS.searchedNames.indexOf(nm)===-1) {
+        // Don't auto-search — player must do it manually
+        // But we track that they've seen the name
+      }
+    }
+  }
+
+  } // end if !already collected
+
+  // Update scene nav
+  updateSceneNav();
+}
+
+function showNoteDisplay(clue) {
+  var area = document.getElementById('scene-note-area');
+  area.innerHTML = '<div class="note-display">'+
+    '<div class="note-label">'+clue.title+'</div>'+
+    '<div class="note-text">'+clue.text+'</div>'+
+    '<button class="btn small" style="margin-top:12px;" onclick="document.getElementById(\'scene-note-area\').innerHTML=\'\'">收起</button>'+
+    '</div>';
+}
+
+function updateSceneNav() {
+  var nav = document.getElementById('scene-nav');
+  if (GS.cluesCollected.length >= 1) {
+    nav.innerHTML = '<button class="btn small" onclick="navigateTo(\'search\')">前往校园官网检索 →</button>'+
+      '<br><span style="font-size:.7rem;color:var(--text-dim);">提示：注意现场纸条上出现的名字</span>';
+  }
+}
+
+// ============================================================
+// CAMPUS SEARCH — core mechanic
+// ============================================================
+
+function doSearch() {
+  var input = document.getElementById('search-input');
+  var query = input.value.trim();
+  input.value = '';
+
+  if (!query) return;
+
+  var area = document.getElementById('search-result-area');
+
+  // Resolve alias → full name
+  var searchName = NAME_ALIASES[query] || query;
+
+  // Check if query matches a searchable name
+  var match = null;
+  for (var name in SEARCHABLE) {
+    if (searchName === name) {
+      match = SEARCHABLE[name];
+      break;
+    }
+  }
+
+  if (match && GS.searchedNames.indexOf(searchName)===-1) {
+    // SILENT unlock — no success message, no notification
+    GS.searchedNames.push(searchName);
+    // The character silently appears in profiles and interrogation
+    area.innerHTML = '<span style="color:var(--text-dim);">查询处理完毕。</span>';
+    setTimeout(function(){ area.innerHTML = ''; }, 1500);
+    updateSidebar()
+  } else {
+    // No match or already searched — nothing happens
+    area.innerHTML = '<span style="color:var(--text-dim);">查询处理完毕。</span>';
+    setTimeout(function(){ area.innerHTML = ''; }, 1500)
+  }
+}
+
+// ============================================================
+// INTERROGATION
+// ============================================================
+
+function renderInterrogation() {
+  var unlocked = getUnlockedInterrogatables();
+
+  // Auto-select first unlocked suspect if none selected
+  if (!GS.currentSuspect && unlocked.length > 0) {
+    GS.currentSuspect = unlocked[0];
+  }
+  // If current suspect is no longer unlocked, pick first unlocked
+  if (GS.currentSuspect && unlocked.indexOf(GS.currentSuspect)===-1 && unlocked.length > 0) {
+    GS.currentSuspect = unlocked[0];
+  }
+
+  // Render suspect select buttons
+  var selectEl = document.getElementById('suspect-select');
+  if (unlocked.length===0) {
+    selectEl.innerHTML = '<span style="color:var(--text-dim);font-size:.8rem;">暂无已解锁的可审问人物</span>';
+  } else {
+    var html = '';
+    for (var i=0;i<unlocked.length;i++) {
+      var u = unlocked[i];
+      var ir = INTERROGATIONS[u];
+      if (!ir) continue;
+      var isActive = GS.currentSuspect===u;
+      var isDone = GS.interrogationsDone.indexOf(u)!==-1;
+      html += '<button class="suspect-opt'+(isActive?' active':'')+(isDone?' done':'')+
+        '" data-suspect="'+u+'">'+ir.name+' · '+ir.title+'</button>';
+    }
+    selectEl.innerHTML = html;
+  }
+
+  // Render current suspect panel
+  if (!GS.currentSuspect || unlocked.indexOf(GS.currentSuspect)===-1) {
+    document.getElementById('testimony-text').style.display = 'none';
+    document.getElementById('interrogate-empty').style.display = 'block';
+    document.getElementById('response-area').innerHTML = '';
+    document.getElementById('questions-list').innerHTML = '';
+  } else {
+    document.getElementById('interrogate-empty').style.display = 'none';
+    renderSuspectPanel(GS.currentSuspect);
+  }
+
+  checkVoteAvailability();
+}
+
+// Event delegation for suspect tabs and question buttons
+document.getElementById('suspect-select').addEventListener('click', function(e) {
+  var btn = e.target.closest('.suspect-opt');
+  if (!btn) return;
+  var sid = btn.getAttribute('data-suspect');
+  if (sid) switchSuspect(sid);
+});
+
+document.getElementById('questions-list').addEventListener('click', function(e) {
+  var btn = e.target.closest('.q-btn');
+  if (!btn) return;
+  var sid = btn.getAttribute('data-suspect');
+  var qid = btn.getAttribute('data-question');
+  if (sid && qid) askQuestion(sid, qid);
+});
+
+function getUnlockedInterrogatables() {
+  var result = [];
+  var interrogatableIds = ['xinlingling','zhongting','mile','linqiyue','classmateA','mileBoyfriend','linBoyfriend','baoan'];
+  for (var i=0;i<interrogatableIds.length;i++) {
+    var id = interrogatableIds[i];
+    // Find the search name that maps to this id
+    var searchName = null;
+    for (var name in SEARCHABLE) {
+      if (SEARCHABLE[name].id === id) { searchName = name; break; }
+    }
+    if (searchName && GS.searchedNames.indexOf(searchName)!==-1) {
+      result.push(id);
+    }
+  }
+  return result;
+}
+
+function switchSuspect(suspectId) {
+  GS.currentSuspect = suspectId;
+  renderInterrogation();
+}
+
+function renderSuspectPanel(suspectId) {
+  var ir = INTERROGATIONS[suspectId];
+  if (!ir) return;
+
+  document.getElementById('testimony-text').style.display = 'block';
+  document.getElementById('testimony-text').textContent = ir.testimony;
+
+  var asked = GS.questionsAsked[suspectId] || [];
+
+  // Questions
+  var qHtml = '';
+  for (var i=0;i<ir.questions.length;i++) {
+    var q = ir.questions[i];
+    var isAsked = asked.indexOf(q.id)!==-1;
+    qHtml += '<button class="q-btn'+(isAsked?' asked':'')+
+      '" data-suspect="'+suspectId+'" data-question="'+q.id+'">'+
+      (isAsked?'✓ ':'▸ ')+q.text+'</button>';
+  }
+  document.getElementById('questions-list').innerHTML = qHtml;
+
+  // Response area — show last asked response
+  if (asked.length > 0) {
+    var lastQid = asked[asked.length-1];
+    var lastQ = null;
+    for (var j=0;j<ir.questions.length;j++) {
+      if (ir.questions[j].id===lastQid) { lastQ=ir.questions[j]; break; }
+    }
+    if (lastQ) {
+      document.getElementById('response-area').innerHTML =
+        '<div class="response"><strong style="color:var(--accent);">'+ir.name+'：</strong>'+
+        '<span>'+lastQ.response+'</span></div>';
+    }
+  } else {
+    document.getElementById('response-area').innerHTML = '';
+  }
+}
+
+function askQuestion(suspectId, questionId) {
+  if (!GS.questionsAsked[suspectId]) GS.questionsAsked[suspectId] = [];
+  var alreadyAsked = GS.questionsAsked[suspectId].indexOf(questionId)!==-1;
+
+  if (!alreadyAsked) {
+    GS.questionsAsked[suspectId].push(questionId);
+
+    // Check completion
+    var asked = GS.questionsAsked[suspectId];
+    var ir = INTERROGATIONS[suspectId];
+    if (asked.length >= ir.questions.length) {
+      if (GS.interrogationsDone.indexOf(suspectId)===-1) {
+        GS.interrogationsDone.push(suspectId);
+      }
+    }
+  } else {
+    // Re-reading: move this question to end so renderSuspectPanel shows it
+    GS.questionsAsked[suspectId] = GS.questionsAsked[suspectId].filter(function(id){return id!==questionId;});
+    GS.questionsAsked[suspectId].push(questionId);
+  }
+
+  renderInterrogation();
+  checkVoteAvailability();
+}
+
+function checkVoteAvailability() {
+  // Player can vote once at least 1 suspect is interrogated
+  // (but should ideally interrogate all)
+  var btn = document.getElementById('btn-to-vote');
+  if (GS.interrogationsDone.length >= 1) {
+    btn.style.display = 'inline-block';
+  }
+}
+
+// ============================================================
+// VOTE
+// ============================================================
+
+function renderVote() {
+  var grid = document.getElementById('vote-grid');
+  var suspectNames = ['辛玲玲','钟婷','米乐','林七月'];
+  var suspectIds = ['xinlingling','zhongting','mile','linqiyue'];
+  var hints = {
+    xinlingling:'温柔宅女 · 游戏固搭',
+    zhongting:'自恋臆想 · 借号网恋',
+    mile:'隐秘前女友 · 嘴硬不认',
+    linqiyue:'认妹撒娇 · 暧昧边界模糊'
+  };
+
+  var html = '';
+  for (var i=0;i<suspectNames.length;i++) {
+    var name = suspectNames[i];
+    var id = suspectIds[i];
+    // Only show if unlocked (searched)
+    if (GS.searchedNames.indexOf(name)===-1) {
+      html += '<button class="vote-btn" disabled style="opacity:.3;cursor:default;">'+
+        '<span class="vn">???</span>'+
+        '<span class="vh">未解锁</span></button>';
+    } else {
+      html += '<button class="vote-btn" onclick="castVote(\''+id+'\')">'+
+        '<span class="vn">'+name+'</span>'+
+        '<span class="vh">'+hints[id]+'</span></button>';
+    }
+  }
+  grid.innerHTML = html;
+}
+
+function castVote(suspectId) {
+  if (GS.voteCast !== null) return;
+  GS.voteCast = suspectId;
+
+  var correctSuspect = 'zhongting';
+  var allUnlocked = GS.searchedNames.length >= 7; // all 7 characters found
+
+  // Determine if player found 钟婷
+  var foundZhongTing = GS.searchedNames.indexOf('钟婷')!==-1;
+
+  if (suspectId===correctSuspect && foundZhongTing) {
+    GS.ending = 'true';
+  } else if (suspectId===correctSuspect && !foundZhongTing) {
+    // Shouldn't happen if钟婷 not unlocked, but handle edge case
+    GS.ending = 'true';
+  } else {
+    GS.ending = 'wrong';
+  }
+
+  // Check if insufficient characters found
+  if (GS.searchedNames.length < 4) {
+    GS.ending = 'insufficient';
+  }
+
+  navigateTo('ending');
+  renderEnding();
+}
+
+// ============================================================
+// ENDING
+// ============================================================
+
+function renderEnding() {
+  var c = document.getElementById('ending-content');
+  var suspectNames = {xinlingling:'辛玲玲',zhongting:'钟婷',mile:'米乐',linqiyue:'林七月'};
+
+  if (GS.ending==='true') {
+    c.innerHTML = ''+
+      '<div class="et">TRUE ENDING</div>'+
+      '<h2 style="color:var(--gold);">真结局 · 救赎落幕</h2>'+
+      '<div class="eb">'+
+      '<p>你指出了<span style="color:var(--accent-glow);font-weight:600;">钟婷</span>。</p>'+
+      '<p>她怔了很久，然后笑了——不是胜利的笑，是一个人终于被看穿之后，解脱的笑。</p>'+
+      '<p>所有谎言破碎。钟婷崩溃认罪。</p>'+
+      '<p>她不是恶毒之人。是被自恋、压抑、羞辱、玩弄逼疯的普通人。</p>'+
+      '<p>陈越一生周旋四女、玩弄真心、靠暧昧填补自卑。</p>'+
+      '<p>最终死在自己随口的一句嘲讽里，死在自己亲手制造的孽缘里。</p>'+
+      '<p>钟婷的日记里写着：<em>"我只是想被一个人真心喜欢，这也有错吗？"</em></p>'+
+      '<div class="eq">"所有暧昧皆是牢笼，所有欺骗终会反噬。"</div>'+
+      '</div>'+
+      '<button class="btn" onclick="restartGame()">重新开始</button>';
+  } else if (GS.ending==='insufficient') {
+    c.innerHTML = ''+
+      '<div class="et">INCOMPLETE ENDING</div>'+
+      '<h2 style="color:var(--text-dim);">档案缺失 · 无法开庭</h2>'+
+      '<div class="eb">'+
+      '<p>你解锁的人物档案过少，关键证据链无法形成。</p>'+
+      '<p>案件因信息不足被强制结案。封存于校史馆深处。</p>'+
+      '<p>也许——你漏掉了某个隐藏的名字。</p>'+
+      '<div class="eq">"真相需要每一个碎片。缺少一片，全盘皆盲。"</div>'+
+      '</div>'+
+      '<button class="btn" onclick="restartGame()">重新调查</button>';
+  } else {
+    c.innerHTML = ''+
+      '<div class="et">COLD CASE ENDING</div>'+
+      '<h2 style="color:var(--text-dim);">校园未解悬案</h2>'+
+      '<div class="eb">'+
+      '<p>你指认了<span style="color:var(--accent-glow);">'+(suspectNames[GS.voteCast]||'')+'</span>。</p>'+
+      '<p>但证据链无法闭环。真正的凶手，带着她未被揭穿的完美犯罪，消失在人海中。</p>'+
+      '<p>案件永久封存。每个人心底都藏着秘密与伤痕——无人救赎，无人真相。</p>'+
+      '<div class="eq">"谎言蒙蔽了所有人的眼睛，包括你自己的。"</div>'+
+      '</div>'+
+      '<button class="btn" onclick="restartGame()">重新推理</button>';
+  }
+}
+
+function restartGame() {
+  GS = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  document.getElementById('sidebar').classList.add('hidden');
+  resetUI();
+  navigateTo('home');
+  updateSidebar();
+}
+
+// ============================================================
+// SIDEBAR UPDATES
+// ============================================================
+
+function updateSidebar() {
+  updateProfileSidebar();
+  updateEvidenceSidebar();
+}
+
+function updateProfileSidebar() {
+  var list = document.getElementById('profile-list');
+  var html = '';
+
+  // Always show victim
+  html += '<div class="char-mini" onclick="showVictimDetail()">'+
+    '<span class="name">陈越</span><span class="tag">死者</span>'+
+    '<div class="brief">高三 · 年级第一 · 延时毒杀</div></div>';
+
+  var hasUnlocked = false;
+  for (var name in SEARCHABLE) {
+    if (GS.searchedNames.indexOf(name)!==-1) {
+      hasUnlocked = true;
+      var p = PROFILES[SEARCHABLE[name].id];
+      if (!p) continue;
+      html += '<div class="char-mini" onclick="showProfileDetail(\''+SEARCHABLE[name].id+'\')">'+
+        '<span class="name">'+p.name+'</span><span class="tag">'+p.tag+'</span>'+
+        '<div class="brief">'+(p.class||'')+'</div></div>';
+    }
+  }
+
+  document.getElementById('no-profiles-msg').style.display = hasUnlocked ? 'none' : 'block';
+  list.innerHTML = html + '<div id="no-profiles-msg" style="padding:12px;text-align:center;font-size:.7rem;color:var(--text-dim);'+(hasUnlocked?'display:none':'')+'">暂无已解锁人物档案<br>请通过现场搜查与校园官网检索解锁</div>';
+}
+
+function updateEvidenceSidebar() {
+  var clueIds = ['clue1','clue2','clue3','clue4','clue5'];
+  for (var i=0;i<clueIds.length;i++) {
+    var card = document.getElementById('ev-'+(i+1));
+    if (!card) continue;
+    if (GS.cluesCollected.indexOf(clueIds[i])!==-1) {
+      var clue = CLUES[clueIds[i]];
+      card.classList.remove('locked');
+      card.setAttribute('data-clue', clueIds[i]);
+      card.innerHTML = '<span class="ev-label">证据 '+(i+1)+'</span><br>'+clue.title;
+    }
+  }
+}
+
+// Evidence sidebar click delegation
+document.getElementById('evidence-list').addEventListener('click', function(e) {
+  var card = e.target.closest('.evidence-card');
+  if (!card || card.classList.contains('locked')) return;
+  var clueId = card.getAttribute('data-clue');
+  if (clueId && CLUES[clueId]) {
+    var clue = CLUES[clueId];
+    showModal(clue.title, 'EVIDENCE', clue.text);
+  }
+});
+
+// ============================================================
+// PROFILE DETAILS (modal)
+// ============================================================
+
+function showVictimDetail() {
+  showModal('死者：陈越','VICTIM',
+    '外貌普通、微胖、自卑又自负。擅长语言拿捏，对所有女生不拒绝、不负责、不公开。<br><br>死因：饮用水延时慢性毒杀。投毒窗口：16:00–18:00。毒发时间：约20:15。<br><br>案发教室为伪密室：18:00保洁锁楼，门窗完好，无撬动痕迹。');
+}
+
+function showProfileDetail(profileId) {
+  var p = PROFILES[profileId];
+  if (!p) return;
+  var extra = "";
+  if (p.class) extra += "<div style=\"margin-top:8px;font-size:.8rem;color:var(--text-dim);\">班级：" + p.class + "  |  学号：" + (p.studentId||"") + "</div>";
+  if (p.message) extra += "<div style=\"margin-top:12px;padding:10px;background:var(--bg-deep);border-radius:4px;font-size:.82rem;color:var(--text-secondary);border-left:2px solid var(--blue-link);\">" + p.message + "</div>";
+  showModal(p.name, p.tag, p.text + extra);
+}
+
+function showModal(title, tag, text) {
+  var popup = document.getElementById('clue-popup');
+  popup.style.display = 'flex';
+  popup.innerHTML = '<div class="modal-content">'+
+    '<span style="display:inline-block;background:var(--accent-dim);color:var(--accent-glow);padding:2px 10px;border-radius:3px;font-size:.7rem;">'+tag+'</span>'+
+    '<h3>'+title+'</h3>'+
+    '<p>'+text+'</p>'+
+    '<button class="btn small" onclick="document.getElementById(\'clue-popup\').style.display=\'none\'">关闭</button>'+
+    '</div>';
+}
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+
+function saveGame() {
+  var sd = JSON.parse(JSON.stringify(GS));
+  sd.timestamp = new Date().toISOString();
+  localStorage.setItem('aisha_save_v2', JSON.stringify(sd));
+  showToast('💾 游戏已存档');
+}
+
+function loadGame() {
+  var raw = localStorage.getItem('aisha_save_v2');
+  if (!raw) { showToast('⚠ 没有找到存档'); return; }
+  try {
+    var sd = JSON.parse(raw);
+    GS = sd;
+    resetUI();
+    navigateTo(GS.currentPage||'opening');
+    if (GS.currentPage==='interrogate') renderInterrogation();
+    if (GS.currentPage==='vote') renderVote();
+    if (GS.currentPage==='ending') renderEnding();
+    updateSidebar();
+    showToast('📂 存档已读取');
+  } catch(e) { showToast('⚠ 存档损坏'); }
+}
+
+function showToast(msg) {
+  var ct = document.getElementById('toast-container');
+  var t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  ct.appendChild(t);
+  setTimeout(function(){t.remove()},2500);
+}
+
+// ============================================================
+// GLOBAL EVENTS
+// ============================================================
+
+document.addEventListener('click',function(e){
+  if (e.target.id==='clue-popup') e.target.style.display='none';
+});
+
+document.addEventListener('keydown',function(e){
+  if (e.key==='Escape') {
+    document.getElementById('clue-popup').style.display='none';
+  }
+  if (e.ctrlKey && e.key==='s') {
+    e.preventDefault();
+    if (GS.currentPage!=='home') saveGame();
+  }
+});
+
+console.log('🔍 爱杀日志 v2 — 纯探索式推理');
+console.log('规则：全员隐藏。现场找名字 → 校园官网搜名字 → 解锁审问。');
+console.log('无提示、无引导、无进度。一切靠你自己。');
+</script>
+</body>
+</html>
